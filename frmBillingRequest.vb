@@ -2,11 +2,9 @@
 
 Public Class frmBillingRequest
 
-    '============================
-    ' FORM LOAD
-    '============================
     Private Sub frmBillingRequest_Load(sender As Object, e As EventArgs) Handles MyBase.Load
-        LoadBillingData()
+        LoadRequestsData()
+        CheckApprovalStatus()
     End Sub
 
     '============================
@@ -15,109 +13,127 @@ Public Class frmBillingRequest
     Private Sub btnRequestBill_Click(sender As Object, e As EventArgs) Handles btnRequestBill.Click
         Dim addForm As New frmAddBillingRequest()
         If addForm.ShowDialog() = DialogResult.OK Then
-            LoadBillingData() ' Refresh DataGridView after adding a new bill
+            LoadRequestsData()
         End If
     End Sub
 
     '============================
-    ' LOAD ONLY PENDING BILLING DATA
+    ' LOAD ALL REQUESTS (BILLING + REPLACEMENT)
     '============================
-    Private Sub LoadBillingData()
+    Private Sub LoadRequestsData()
         Try
             OpenConnection()
 
             Dim query As String = "
-                SELECT b.BillID, s.SaleID, b.BillDate, b.Amount, b.Status, 
-                       u.FullName AS ApprovedBy
+                SELECT 
+                    b.BillID AS RequestID, 
+                    'Billing' AS RequestType,
+                    s.SaleID AS RelatedID,
+                    b.BillDate AS RequestDate, 
+                    b.Amount AS Cost,
+                    b.Status,
+                    u.FullName AS ApprovedBy
                 FROM billing b
                 LEFT JOIN users u ON b.ApprovedBy = u.UserID
                 LEFT JOIN sales s ON b.SaleID = s.SaleID
-                WHERE b.Status = 'Pending'
-                ORDER BY b.BillDate DESC
+
+                UNION ALL
+
+                SELECT 
+                    r.ReplacementID AS RequestID,
+                    'Replacement' AS RequestType,
+                    r.ComputerID AS RelatedID,
+                    r.RequestDate AS RequestDate,
+                    r.Cost AS Cost,
+                    r.Status,
+                    u.FullName AS ApprovedBy
+                FROM replacements r
+                LEFT JOIN users u ON r.ApprovedBy = u.UserID
             "
 
             Dim dt As New DataTable()
-            Dim da As New MySqlDataAdapter(query, conn)
-            da.Fill(dt)
+            Using cmd As New MySqlCommand(query, conn)
+                Dim da As New MySqlDataAdapter(cmd)
+                da.Fill(dt)
+            End Using
+
             dgvBilling.DataSource = dt
 
-            ' ✅ Update summary labels
-            lblTotalBills.Text = $"Total Bills: {dt.Rows.Count} 🧾"
-            lblTotalAmount.Text = $"💵 Total Amount: ₱{If(IsDBNull(dt.Compute("SUM(Amount)", "")), 0, dt.Compute("SUM(Amount)", ""))}"
-            lblPending.Text = $"🕐 Pending Bills: {dt.Rows.Count}"
+            ' Update summary labels safely
+            Dim totalAmount As Decimal = 0
+            If dt.Rows.Count > 0 Then
+                totalAmount = If(IsDBNull(dt.Compute("SUM(Cost)", "")), 0, Convert.ToDecimal(dt.Compute("SUM(Cost)", "")))
+            End If
+
+            lblTotalBills.Text = $"Total Requests: {dt.Rows.Count} 🧾"
+            lblTotalAmount.Text = $"💵 Total Amount: ₱{totalAmount}"
+            lblPending.Text = $"🕐 Pending Requests: {dt.Select("Status='Pending'").Length}"
 
         Catch ex As Exception
-            MessageBox.Show("Error loading billing data: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            MessageBox.Show("Error loading requests data: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
         Finally
             CloseConnection()
         End Try
     End Sub
 
     '============================
-    ' MARK BILL AS PAID (REAL-TIME REMOVAL)
+    ' CHECK APPROVAL STATUS
     '============================
-    Private Sub btnMarkPaid_Click(sender As Object, e As EventArgs) Handles btnMarkPaid.Click
-        If dgvBilling.SelectedRows.Count = 0 Then
-            MessageBox.Show("Please select a bill to mark as paid.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning)
-            Return
-        End If
-
-        Dim selectedRow As DataGridViewRow = dgvBilling.SelectedRows(0)
-        Dim billID As Integer = Convert.ToInt32(selectedRow.Cells("BillID").Value)
-        Dim confirm As DialogResult = MessageBox.Show("Mark this bill as PAID?", "Confirm", MessageBoxButtons.YesNo, MessageBoxIcon.Question)
-
-        If confirm = DialogResult.No Then Return
-
+    Private Sub CheckApprovalStatus()
         Try
             OpenConnection()
 
-            Dim query As String = "UPDATE billing SET Status='Paid', ApprovedBy=@ApprovedBy WHERE BillID=@BillID"
+            Dim query As String = "
+                SELECT a.ApprovalID, a.RequestID, a.RequestType, a.Remarks, a.ApprovalStatus
+                FROM approvals a
+                WHERE a.ApprovedBy IS NOT NULL
+                  AND a.IsSeen = 0
+            "
+
+            Dim dt As New DataTable()
             Using cmd As New MySqlCommand(query, conn)
-                cmd.Parameters.AddWithValue("@ApprovedBy", LoggedInUserID)
-                cmd.Parameters.AddWithValue("@BillID", billID)
-                cmd.ExecuteNonQuery()
+                Dim da As New MySqlDataAdapter(cmd)
+                da.Fill(dt)
             End Using
 
-            ' ✅ Remove the row directly from the DataTable (since DataGridView is data-bound)
-            Dim dt As DataTable = TryCast(dgvBilling.DataSource, DataTable)
-            If dt IsNot Nothing Then
-                For Each row As DataRow In dt.Rows
-                    If Convert.ToInt32(row("BillID")) = billID Then
-                        dt.Rows.Remove(row)
-                        Exit For
-                    End If
-                Next
-                dt.AcceptChanges()
-            End If
+            For Each row As DataRow In dt.Rows
+                Dim approvalID As Integer = row("ApprovalID")
+                Dim requestID As Integer = row("RequestID")
+                Dim requestType As String = row("RequestType")
+                Dim remarks As String = If(IsDBNull(row("Remarks")), "", row("Remarks"))
+                Dim approvalStatus As String = row("ApprovalStatus").ToString()
 
-            ' ✅ Update summary labels
-            Dim totalAmount As Decimal = 0
-            For Each row As DataGridViewRow In dgvBilling.Rows
-                totalAmount += Convert.ToDecimal(row.Cells("Amount").Value)
+                ' Update table status accordingly
+                Dim updateQuery As String = ""
+                If requestType = "Billing" Then
+                    updateQuery = "UPDATE billing SET Status=@Status, ApprovedBy=@ApprovedBy WHERE BillID=@ID"
+                ElseIf requestType = "Replacement" Then
+                    updateQuery = "UPDATE replacements SET Status=@Status, ApprovedBy=@ApprovedBy WHERE ReplacementID=@ID"
+                End If
+
+                Using cmdUpdate As New MySqlCommand(updateQuery, conn)
+                    cmdUpdate.Parameters.AddWithValue("@Status", If(approvalStatus = "Approved", "Paid", "Rejected"))
+                    cmdUpdate.Parameters.AddWithValue("@ApprovedBy", LoggedInUserID)
+                    cmdUpdate.Parameters.AddWithValue("@ID", requestID)
+                    cmdUpdate.ExecuteNonQuery()
+                End Using
+
+                ' Show message only once
+                MessageBox.Show($"Your {requestType} request (ID {requestID}) has been {approvalStatus}." & vbCrLf &
+                                $"Remarks: {remarks}", "Request Update", MessageBoxButtons.OK, MessageBoxIcon.Information)
+
+                ' Mark as seen
+                Using cmdSeen As New MySqlCommand("UPDATE approvals SET IsSeen=1 WHERE ApprovalID=@ApprovalID", conn)
+                    cmdSeen.Parameters.AddWithValue("@ApprovalID", approvalID)
+                    cmdSeen.ExecuteNonQuery()
+                End Using
             Next
 
-            lblTotalBills.Text = $"Total Bills: {dgvBilling.Rows.Count} 🧾"
-            lblTotalAmount.Text = $"💵 Total Amount: ₱{totalAmount}"
-            lblPending.Text = $"🕐 Pending Bills: {dgvBilling.Rows.Count}"
-
-            MessageBox.Show("Bill marked as Paid successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information)
-
         Catch ex As Exception
-            MessageBox.Show("Error updating bill: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            MessageBox.Show("Error checking approvals: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
         Finally
             CloseConnection()
         End Try
-    End Sub
-
-    '============================
-    ' RESERVED EVENTS
-    '============================
-    Private Sub dgvBilling_CellContentClick(sender As Object, e As DataGridViewCellEventArgs) Handles dgvBilling.CellContentClick
-        ' Reserved for future logic
-    End Sub
-
-    Private Sub pnlMain_Paint(sender As Object, e As PaintEventArgs) Handles pnlMain.Paint
-        ' Optional custom styling
     End Sub
 
 End Class

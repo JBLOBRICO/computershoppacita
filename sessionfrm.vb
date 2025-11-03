@@ -20,7 +20,7 @@ Public Class sessionfrm
     End Sub
 
     Private Sub cmbSessionType_SelectedIndexChanged(sender As Object, e As EventArgs)
-        txtSales.Enabled = (cmbSessionType.SelectedItem.ToString() = "Fixed")
+        txtSales.Enabled = (cmbSessionType.SelectedItem?.ToString() = "Fixed")
     End Sub
 
     ' ====== LOAD COMPUTERS ======
@@ -86,7 +86,6 @@ Public Class sessionfrm
             Return
         End If
 
-<<<<<<< HEAD
         Dim status = PCStatus(SelectedPCID)
         If status = "In Use" Then
             MessageBox.Show("This PC is already in use.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning)
@@ -97,7 +96,7 @@ Public Class sessionfrm
         End If
 
         ' Determine session type
-        Dim sessionType As String = cmbSessionType.SelectedItem.ToString()
+        Dim sessionType As String = cmbSessionType.SelectedItem?.ToString()
         Dim fixedAmount As Decimal = 0
 
         If sessionType = "Fixed" Then
@@ -122,12 +121,7 @@ Public Class sessionfrm
         Try
             OpenConnection()
 
-            ' Insert sale
-=======
-        Try
-            OpenConnection()
-
-            ' ✅ Check current PC status
+            ' Check current PC status in DB
             Dim statusQuery As String = "SELECT Status FROM computers WHERE ComputerID=@id"
             cmd = New MySqlCommand(statusQuery, conn)
             cmd.Parameters.AddWithValue("@id", SelectedPCID)
@@ -141,11 +135,10 @@ Public Class sessionfrm
                 Return
             End If
 
-            ' ✅ Start the session
->>>>>>> 0fcd1087f35f91cc4c477e1b3ec1fb9e783ef697
+            ' Insert new sale
             Dim insertQuery As String = "
-            INSERT INTO sales (ComputerID, UserID, StartTime, RatePerHour, PaymentStatus)
-            VALUES (@compID, @userID, NOW(), @rate, 'Unpaid');"
+                INSERT INTO sales (ComputerID, UserID, StartTime, RatePerHour, PaymentStatus)
+                VALUES (@compID, @userID, NOW(), @rate, 'Unpaid');"
             cmd = New MySqlCommand(insertQuery, conn)
             cmd.Parameters.AddWithValue("@compID", SelectedPCID)
             cmd.Parameters.AddWithValue("@userID", LoggedInUserID)
@@ -167,14 +160,12 @@ Public Class sessionfrm
 
             MessageBox.Show("Session started for " & SelectedPCName)
             LoadComputers()
-
         Catch ex As Exception
             MessageBox.Show("Error starting session: " & ex.Message)
         Finally
             CloseConnection()
         End Try
     End Sub
-
 
     ' ====== END SESSION ======
     Private Sub btnEnd_Click(sender As Object, e As EventArgs) Handles btnEnd.Click
@@ -185,10 +176,8 @@ Public Class sessionfrm
 
         Try
             OpenConnection()
-<<<<<<< HEAD
-=======
 
-            ' ✅ Check current PC status
+            ' Check PC status
             Dim statusQuery As String = "SELECT Status FROM computers WHERE ComputerID=@id"
             cmd = New MySqlCommand(statusQuery, conn)
             cmd.Parameters.AddWithValue("@id", SelectedPCID)
@@ -202,8 +191,7 @@ Public Class sessionfrm
                 Return
             End If
 
-            ' ✅ Get the active unpaid session
->>>>>>> 0fcd1087f35f91cc4c477e1b3ec1fb9e783ef697
+            ' Get active unpaid session
             Dim getSaleQuery As String = "SELECT SaleID, StartTime FROM sales WHERE ComputerID=@id AND PaymentStatus='Unpaid' ORDER BY SaleID DESC LIMIT 1"
             cmd = New MySqlCommand(getSaleQuery, conn)
             cmd.Parameters.AddWithValue("@id", SelectedPCID)
@@ -225,7 +213,7 @@ Public Class sessionfrm
                 cmd.Parameters.AddWithValue("@saleID", saleID)
                 cmd.ExecuteNonQuery()
 
-                ' Reset PC
+                ' Update PC to available
                 Dim updatePC As String = "UPDATE computers SET Status='Available' WHERE ComputerID=@id"
                 cmd = New MySqlCommand(updatePC, conn)
                 cmd.Parameters.AddWithValue("@id", SelectedPCID)
@@ -238,20 +226,16 @@ Public Class sessionfrm
                 MessageBox.Show("Session ended. Total Amount: ₱" & totalAmount.ToString("F2"))
                 LoadComputers()
             Else
-<<<<<<< HEAD
                 dr.Close()
-                MessageBox.Show("No active session found for this PC.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning)
-=======
-                MessageBox.Show("No active unpaid session found for this PC.")
->>>>>>> 0fcd1087f35f91cc4c477e1b3ec1fb9e783ef697
+                MessageBox.Show("No active unpaid session found for this PC.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning)
             End If
+
         Catch ex As Exception
             MessageBox.Show("Error ending session: " & ex.Message)
         Finally
             CloseConnection()
         End Try
     End Sub
-
 
     ' ====== SESSION TIMER ======
     Private Sub sessionTimer_Tick(sender As Object, e As EventArgs) Handles sessionTimer.Tick
@@ -274,11 +258,4 @@ Public Class sessionfrm
             End If
         End If
     End Sub
-<<<<<<< HEAD
-=======
-
-    Private Sub pnlHeader_Paint(sender As Object, e As PaintEventArgs) Handles pnlHeader.Paint
-
-    End Sub
->>>>>>> 0fcd1087f35f91cc4c477e1b3ec1fb9e783ef697
 End Class

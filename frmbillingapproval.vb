@@ -109,19 +109,20 @@ Public Class frmBillingApproval
         Try
             Dim updateQuery As String = ""
             If requestType = "Billing" Then
-                updateQuery = "UPDATE billing SET Status='Pending', ApprovedBy=NULL WHERE BillID=@ID"
+                updateQuery = "UPDATE billing SET Status='Rejected', ApprovedBy=@ApprovedBy WHERE BillID=@ID"
             ElseIf requestType = "Replacement" Then
-                updateQuery = "UPDATE replacements SET Status='Pending', ApprovedBy=NULL WHERE ReplacementID=@ID"
+                updateQuery = "UPDATE replacements SET Status='Rejected', ApprovedBy=@ApprovedBy WHERE ReplacementID=@ID"
             End If
 
             Using cmd As New MySqlCommand(updateQuery, conn)
+                cmd.Parameters.AddWithValue("@ApprovedBy", LoggedInUserID) ' <-- fix here
                 cmd.Parameters.AddWithValue("@ID", requestID)
                 conn.Open()
                 cmd.ExecuteNonQuery()
                 conn.Close()
             End Using
 
-            ' Log rejection
+            ' Log rejection in approvals table
             InsertApprovalLog(requestType, requestID, "Rejected")
 
             MessageBox.Show($"{requestType} request has been rejected.", "Rejected", MessageBoxButtons.OK, MessageBoxIcon.Information)
@@ -135,14 +136,19 @@ Public Class frmBillingApproval
     '====================================================
     ' INSERT INTO APPROVAL LOG
     '====================================================
-    Private Sub InsertApprovalLog(requestType As String, requestID As Integer, remarks As String)
+    Private Sub InsertApprovalLog(requestType As String, requestID As Integer, status As String)
         Try
-            Dim query As String = "INSERT INTO approvals (RequestType, RequestID, ApprovedBy, Remarks) VALUES (@Type, @ReqID, @ApprovedBy, @Remarks)"
+            Dim query As String = "
+                INSERT INTO approvals (RequestType, RequestID, ApprovedBy, Remarks, ApprovalStatus, IsSeen)
+                VALUES (@Type, @ReqID, @ApprovedBy, @Remarks, @ApprovalStatus, 0)
+            "
+
             Using cmd As New MySqlCommand(query, conn)
                 cmd.Parameters.AddWithValue("@Type", requestType)
                 cmd.Parameters.AddWithValue("@ReqID", requestID)
                 cmd.Parameters.AddWithValue("@ApprovedBy", LoggedInUserID)
-                cmd.Parameters.AddWithValue("@Remarks", remarks)
+                cmd.Parameters.AddWithValue("@Remarks", status)
+                cmd.Parameters.AddWithValue("@ApprovalStatus", status)
                 conn.Open()
                 cmd.ExecuteNonQuery()
                 conn.Close()
@@ -151,6 +157,10 @@ Public Class frmBillingApproval
             conn.Close()
             MessageBox.Show("Error inserting approval log: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
         End Try
+    End Sub
+
+    Private Sub dgvBillingRequests_CellContentClick(sender As Object, e As DataGridViewCellEventArgs) Handles dgvBillingRequests.CellContentClick
+        ' Reserved for future features
     End Sub
 
 End Class

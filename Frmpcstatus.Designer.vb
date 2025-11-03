@@ -71,6 +71,8 @@ Partial Class Frmpcstatus
         '
         Me.dgvPCStatus.AllowUserToAddRows = False
         Me.dgvPCStatus.AllowUserToDeleteRows = False
+        Me.dgvPCStatus.AllowUserToResizeColumns = False
+        Me.dgvPCStatus.AllowUserToResizeRows = False
         Me.dgvPCStatus.BackgroundColor = System.Drawing.Color.White
         Me.dgvPCStatus.BorderStyle = System.Windows.Forms.BorderStyle.None
         Me.dgvPCStatus.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize

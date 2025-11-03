@@ -24,7 +24,6 @@ Partial Class frmBillingRequest
         Me.dgvBilling = New System.Windows.Forms.DataGridView()
         Me.pnlSide = New System.Windows.Forms.Panel()
         Me.btnRequestBill = New System.Windows.Forms.Button()
-        Me.btnMarkPaid = New System.Windows.Forms.Button()
         Me.lblPending = New System.Windows.Forms.Label()
         Me.lblTotalAmount = New System.Windows.Forms.Label()
         Me.lblTotalBills = New System.Windows.Forms.Label()
@@ -100,7 +99,6 @@ Partial Class frmBillingRequest
         '
         Me.pnlSide.BackColor = System.Drawing.Color.White
         Me.pnlSide.Controls.Add(Me.btnRequestBill)
-        Me.pnlSide.Controls.Add(Me.btnMarkPaid)
         Me.pnlSide.Controls.Add(Me.lblPending)
         Me.pnlSide.Controls.Add(Me.lblTotalAmount)
         Me.pnlSide.Controls.Add(Me.lblTotalBills)
@@ -125,21 +123,6 @@ Partial Class frmBillingRequest
         Me.btnRequestBill.Text = "➕ Request New Bill"
         Me.ttButtons.SetToolTip(Me.btnRequestBill, "Click to create a new billing request")
         Me.btnRequestBill.UseVisualStyleBackColor = False
-        '
-        'btnMarkPaid
-        '
-        Me.btnMarkPaid.BackColor = System.Drawing.Color.FromArgb(CType(CType(72, Byte), Integer), CType(CType(163, Byte), Integer), CType(CType(120, Byte), Integer))
-        Me.btnMarkPaid.FlatAppearance.BorderSize = 0
-        Me.btnMarkPaid.FlatStyle = System.Windows.Forms.FlatStyle.Flat
-        Me.btnMarkPaid.Font = New System.Drawing.Font("Segoe UI", 11.0!, System.Drawing.FontStyle.Bold)
-        Me.btnMarkPaid.ForeColor = System.Drawing.Color.White
-        Me.btnMarkPaid.Location = New System.Drawing.Point(15, 250)
-        Me.btnMarkPaid.Name = "btnMarkPaid"
-        Me.btnMarkPaid.Size = New System.Drawing.Size(200, 35)
-        Me.btnMarkPaid.TabIndex = 1
-        Me.btnMarkPaid.Text = "✅ Mark as Paid"
-        Me.ttButtons.SetToolTip(Me.btnMarkPaid, "Mark the selected bill as paid")
-        Me.btnMarkPaid.UseVisualStyleBackColor = False
         '
         'lblPending
         '
@@ -195,7 +178,6 @@ Partial Class frmBillingRequest
     Friend WithEvents dgvBilling As DataGridView
     Friend WithEvents pnlSide As Panel
     Friend WithEvents btnRequestBill As Button
-    Friend WithEvents btnMarkPaid As Button
     Friend WithEvents lblTotalBills As Label
     Friend WithEvents lblTotalAmount As Label
     Friend WithEvents lblPending As Label
