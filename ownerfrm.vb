@@ -44,4 +44,11 @@
     Private Sub btnMonitoring_Click(sender As Object, e As EventArgs) Handles btnMonitoring.Click
         LoadChildForm(New frmSystemMonitor())
     End Sub
+
+    Private Sub btnLogout_Click(sender As Object, e As EventArgs) Handles btnLogout.Click
+        If MsgBox("Are you sure you want to logout?", vbQuestion + vbYesNo, "Logout") = vbYes Then
+            Me.Close()
+            Form1.Show()
+        End If
+    End Sub
 End Class

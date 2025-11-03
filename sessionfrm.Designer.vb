@@ -18,25 +18,22 @@ Partial Class sessionfrm
         Me.cmbSessionType = New System.Windows.Forms.ComboBox()
         Me.lblSales = New System.Windows.Forms.Label()
         Me.txtSales = New System.Windows.Forms.TextBox()
+        Me.lblExtraMinutes = New System.Windows.Forms.Label()
+        Me.txtExtraMinutes = New System.Windows.Forms.TextBox()
+        Me.btnAddMinutes = New System.Windows.Forms.Button()
         Me.btnStart = New System.Windows.Forms.Button()
         Me.btnEnd = New System.Windows.Forms.Button()
         Me.sessionTimer = New System.Windows.Forms.Timer(Me.components)
-        Me.pnlHeader.SuspendLayout()
-        Me.pnlInfo.SuspendLayout()
-        Me.SuspendLayout()
-        '
-        'pnlHeader
-        '
-        Me.pnlHeader.BackColor = System.Drawing.Color.FromArgb(CType(CType(58, Byte), Integer), CType(CType(90, Byte), Integer), CType(CType(164, Byte), Integer))
+
+        ' ===== Panel Header =====
+        Me.pnlHeader.BackColor = System.Drawing.Color.FromArgb(58, 90, 164)
         Me.pnlHeader.Controls.Add(Me.lblTitle)
         Me.pnlHeader.Dock = System.Windows.Forms.DockStyle.Top
         Me.pnlHeader.Location = New System.Drawing.Point(0, 0)
         Me.pnlHeader.Name = "pnlHeader"
         Me.pnlHeader.Size = New System.Drawing.Size(956, 39)
         Me.pnlHeader.TabIndex = 2
-        '
-        'lblTitle
-        '
+
         Me.lblTitle.AutoSize = True
         Me.lblTitle.Font = New System.Drawing.Font("Segoe UI", 16.0!, System.Drawing.FontStyle.Bold)
         Me.lblTitle.ForeColor = System.Drawing.Color.White
@@ -45,20 +42,18 @@ Partial Class sessionfrm
         Me.lblTitle.Size = New System.Drawing.Size(226, 30)
         Me.lblTitle.TabIndex = 0
         Me.lblTitle.Text = "💻 Manage Sessions"
-        '
-        'pnlComputers
-        '
+
+        ' ===== Computers Panel =====
         Me.pnlComputers.AutoScroll = True
-        Me.pnlComputers.BackColor = System.Drawing.Color.FromArgb(CType(CType(240, Byte), Integer), CType(CType(242, Byte), Integer), CType(CType(245, Byte), Integer))
+        Me.pnlComputers.BackColor = System.Drawing.Color.FromArgb(240, 242, 245)
         Me.pnlComputers.Dock = System.Windows.Forms.DockStyle.Fill
         Me.pnlComputers.Location = New System.Drawing.Point(0, 39)
         Me.pnlComputers.Name = "pnlComputers"
         Me.pnlComputers.Padding = New System.Windows.Forms.Padding(15, 13, 15, 13)
         Me.pnlComputers.Size = New System.Drawing.Size(731, 359)
         Me.pnlComputers.TabIndex = 0
-        '
-        'pnlInfo
-        '
+
+        ' ===== Info Panel =====
         Me.pnlInfo.BackColor = System.Drawing.Color.White
         Me.pnlInfo.Controls.Add(Me.lblPCName)
         Me.pnlInfo.Controls.Add(Me.lblStatus)
@@ -67,6 +62,9 @@ Partial Class sessionfrm
         Me.pnlInfo.Controls.Add(Me.cmbSessionType)
         Me.pnlInfo.Controls.Add(Me.lblSales)
         Me.pnlInfo.Controls.Add(Me.txtSales)
+        Me.pnlInfo.Controls.Add(Me.lblExtraMinutes)
+        Me.pnlInfo.Controls.Add(Me.txtExtraMinutes)
+        Me.pnlInfo.Controls.Add(Me.btnAddMinutes)
         Me.pnlInfo.Controls.Add(Me.btnStart)
         Me.pnlInfo.Controls.Add(Me.btnEnd)
         Me.pnlInfo.Dock = System.Windows.Forms.DockStyle.Right
@@ -75,9 +73,8 @@ Partial Class sessionfrm
         Me.pnlInfo.Padding = New System.Windows.Forms.Padding(15, 13, 15, 13)
         Me.pnlInfo.Size = New System.Drawing.Size(225, 359)
         Me.pnlInfo.TabIndex = 1
-        '
-        'lblPCName
-        '
+
+        ' ===== Info Labels and TextBoxes =====
         Me.lblPCName.AutoSize = True
         Me.lblPCName.Font = New System.Drawing.Font("Segoe UI", 14.0!, System.Drawing.FontStyle.Bold)
         Me.lblPCName.Location = New System.Drawing.Point(8, 10)
@@ -85,9 +82,7 @@ Partial Class sessionfrm
         Me.lblPCName.Size = New System.Drawing.Size(111, 25)
         Me.lblPCName.TabIndex = 0
         Me.lblPCName.Text = "PC Name: -"
-        '
-        'lblStatus
-        '
+
         Me.lblStatus.AutoSize = True
         Me.lblStatus.Font = New System.Drawing.Font("Segoe UI", 12.0!)
         Me.lblStatus.Location = New System.Drawing.Point(8, 40)
@@ -95,19 +90,15 @@ Partial Class sessionfrm
         Me.lblStatus.Size = New System.Drawing.Size(65, 21)
         Me.lblStatus.TabIndex = 1
         Me.lblStatus.Text = "Status: -"
-        '
-        'lblTimer
-        '
+
         Me.lblTimer.AutoSize = True
         Me.lblTimer.Font = New System.Drawing.Font("Segoe UI", 12.0!)
         Me.lblTimer.Location = New System.Drawing.Point(8, 70)
         Me.lblTimer.Name = "lblTimer"
         Me.lblTimer.Size = New System.Drawing.Size(137, 21)
         Me.lblTimer.TabIndex = 2
-        Me.lblTimer.Text = "Usage Time: 00:00"
-        '
-        'lblSessionType
-        '
+        Me.lblTimer.Text = "Usage Time: 00:00 | ₱0.00"
+
         Me.lblSessionType.AutoSize = True
         Me.lblSessionType.Font = New System.Drawing.Font("Segoe UI", 12.0!)
         Me.lblSessionType.Location = New System.Drawing.Point(8, 100)
@@ -115,9 +106,7 @@ Partial Class sessionfrm
         Me.lblSessionType.Size = New System.Drawing.Size(102, 21)
         Me.lblSessionType.TabIndex = 3
         Me.lblSessionType.Text = "Session Type:"
-        '
-        'cmbSessionType
-        '
+
         Me.cmbSessionType.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList
         Me.cmbSessionType.Font = New System.Drawing.Font("Segoe UI", 12.0!)
         Me.cmbSessionType.Items.AddRange(New Object() {"Open", "Fixed"})
@@ -125,9 +114,7 @@ Partial Class sessionfrm
         Me.cmbSessionType.Name = "cmbSessionType"
         Me.cmbSessionType.Size = New System.Drawing.Size(188, 29)
         Me.cmbSessionType.TabIndex = 4
-        '
-        'lblSales
-        '
+
         Me.lblSales.AutoSize = True
         Me.lblSales.Font = New System.Drawing.Font("Segoe UI", 12.0!)
         Me.lblSales.Location = New System.Drawing.Point(8, 160)
@@ -135,47 +122,66 @@ Partial Class sessionfrm
         Me.lblSales.Size = New System.Drawing.Size(92, 21)
         Me.lblSales.TabIndex = 5
         Me.lblSales.Text = "Amount (₱):"
-        '
-        'txtSales
-        '
+
         Me.txtSales.Font = New System.Drawing.Font("Segoe UI", 12.0!)
         Me.txtSales.Location = New System.Drawing.Point(8, 185)
         Me.txtSales.Name = "txtSales"
         Me.txtSales.Size = New System.Drawing.Size(188, 29)
         Me.txtSales.TabIndex = 6
-        '
-        'btnStart
-        '
-        Me.btnStart.BackColor = System.Drawing.Color.FromArgb(CType(CType(58, Byte), Integer), CType(CType(90, Byte), Integer), CType(CType(164, Byte), Integer))
+
+        ' ===== Extra Minutes =====
+        Me.lblExtraMinutes.AutoSize = True
+        Me.lblExtraMinutes.Font = New System.Drawing.Font("Segoe UI", 12.0!)
+        Me.lblExtraMinutes.Location = New System.Drawing.Point(8, 220)
+        Me.lblExtraMinutes.Name = "lblExtraMinutes"
+        Me.lblExtraMinutes.Size = New System.Drawing.Size(110, 21)
+        Me.lblExtraMinutes.TabIndex = 13
+        Me.lblExtraMinutes.Text = "Add Minutes:"
+
+        Me.txtExtraMinutes.Font = New System.Drawing.Font("Segoe UI", 12.0!)
+        Me.txtExtraMinutes.Location = New System.Drawing.Point(8, 245)
+        Me.txtExtraMinutes.Name = "txtExtraMinutes"
+        Me.txtExtraMinutes.Size = New System.Drawing.Size(100, 29)
+        Me.txtExtraMinutes.TabIndex = 14
+
+        Me.btnAddMinutes.BackColor = System.Drawing.Color.FromArgb(58, 90, 164)
+        Me.btnAddMinutes.FlatStyle = System.Windows.Forms.FlatStyle.Flat
+        Me.btnAddMinutes.Font = New System.Drawing.Font("Segoe UI", 11.0!, System.Drawing.FontStyle.Bold)
+        Me.btnAddMinutes.ForeColor = System.Drawing.Color.White
+        Me.btnAddMinutes.Location = New System.Drawing.Point(115, 245)
+        Me.btnAddMinutes.Name = "btnAddMinutes"
+        Me.btnAddMinutes.Size = New System.Drawing.Size(81, 29)
+        Me.btnAddMinutes.TabIndex = 15
+        Me.btnAddMinutes.Text = "Add"
+        Me.btnAddMinutes.UseVisualStyleBackColor = False
+
+        ' ===== Start/End Buttons =====
+        Me.btnStart.BackColor = System.Drawing.Color.FromArgb(58, 90, 164)
         Me.btnStart.FlatStyle = System.Windows.Forms.FlatStyle.Flat
         Me.btnStart.Font = New System.Drawing.Font("Segoe UI", 11.0!, System.Drawing.FontStyle.Bold)
         Me.btnStart.ForeColor = System.Drawing.Color.White
-        Me.btnStart.Location = New System.Drawing.Point(8, 225)
+        Me.btnStart.Location = New System.Drawing.Point(8, 285)
         Me.btnStart.Name = "btnStart"
-        Me.btnStart.Size = New System.Drawing.Size(188, 26)
+        Me.btnStart.Size = New System.Drawing.Size(188, 41)
         Me.btnStart.TabIndex = 7
         Me.btnStart.Text = "▶ Start Session"
         Me.btnStart.UseVisualStyleBackColor = False
-        '
-        'btnEnd
-        '
-        Me.btnEnd.BackColor = System.Drawing.Color.FromArgb(CType(CType(200, Byte), Integer), CType(CType(60, Byte), Integer), CType(CType(70, Byte), Integer))
+
+        Me.btnEnd.BackColor = System.Drawing.Color.FromArgb(200, 60, 70)
         Me.btnEnd.FlatStyle = System.Windows.Forms.FlatStyle.Flat
         Me.btnEnd.Font = New System.Drawing.Font("Segoe UI", 11.0!, System.Drawing.FontStyle.Bold)
         Me.btnEnd.ForeColor = System.Drawing.Color.White
-        Me.btnEnd.Location = New System.Drawing.Point(8, 260)
+        Me.btnEnd.Location = New System.Drawing.Point(8, 332)
         Me.btnEnd.Name = "btnEnd"
-        Me.btnEnd.Size = New System.Drawing.Size(188, 26)
+        Me.btnEnd.Size = New System.Drawing.Size(188, 41)
         Me.btnEnd.TabIndex = 8
         Me.btnEnd.Text = "⏹ End Session"
         Me.btnEnd.UseVisualStyleBackColor = False
-        '
-        'sessionTimer
-        '
+
+        ' ===== Timer =====
         Me.sessionTimer.Interval = 1000
-        '
-        'sessionfrm
-        '
+
+        ' ===== Form =====
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
         Me.ClientSize = New System.Drawing.Size(956, 398)
@@ -203,6 +209,9 @@ Partial Class sessionfrm
     Friend WithEvents lblTimer As Label
     Friend WithEvents lblSales As Label
     Friend WithEvents txtSales As TextBox
+    Friend WithEvents lblExtraMinutes As Label
+    Friend WithEvents txtExtraMinutes As TextBox
+    Friend WithEvents btnAddMinutes As Button
     Friend WithEvents btnStart As Button
     Friend WithEvents btnEnd As Button
     Friend WithEvents sessionTimer As Timer

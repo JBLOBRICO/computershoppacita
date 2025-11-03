@@ -2,242 +2,253 @@
 Imports System.Windows.Forms.DataVisualization.Charting
 
 Public Class frmanalytics
-    Private conn As MySqlConnection
-    Private da As MySqlDataAdapter
-    Private dt As DataTable
 
     Private Sub frmanalytics_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+        LoadFinancialKPIs()
+        LoadDailyRevenueChart()
+        LoadMonthlyRevenueChart()
+        LoadPCUsageChart()
+        LoadBillingStatusChart()
+        LoadReplacementMaintenanceChart()
+        LoadPendingBilling()
+        LoadReplacementRequests()
+    End Sub
+
+#Region "Load KPI Labels"
+    Private Sub LoadFinancialKPIs()
         Try
-            ' Initialize connection
-            conn = New MySqlConnection("server=127.0.0.1;userid=root;password=;database=pacitacmpdb;")
-            conn.Open()
+            Using conn As New MySqlConnection("server=localhost;user id=root;password=;database=pacitacmpdb;")
+                conn.Open()
 
-            ' Load all charts
-            LoadRevenueChart()
-            LoadSessionsChart()
-            LoadPCStatusChart()
-            LoadBillingChart()
-            LoadReplacementChart()
-            LoadSalesChart()
-            LoadUserRolesChart()
+                ' Total Revenue
+                Dim cmdRevenue As New MySqlCommand("SELECT IFNULL(SUM(TotalAmount),0) FROM sales WHERE PaymentStatus='Paid'", conn)
+                lblTotalRevenue.Text = "💰 Total Revenue: ₱" & Convert.ToDecimal(cmdRevenue.ExecuteScalar()).ToString("F2")
 
-            ' Load new charts
-            LoadTopUsersChart()
-            LoadTopPCsChart()
-            LoadPCUsageChart()
+                ' Total Sessions
+                Dim cmdSessions As New MySqlCommand("SELECT COUNT(*) FROM sales", conn)
+                lblTotalSessions.Text = "🖥 Total Sessions: " & cmdSessions.ExecuteScalar().ToString()
 
+                ' Outstanding Billing
+                Dim cmdOutstanding As New MySqlCommand("SELECT IFNULL(SUM(Amount),0) FROM billing WHERE Status='Pending'", conn)
+                lblOutstandingBilling.Text = "🧾 Outstanding Billing: ₱" & Convert.ToDecimal(cmdOutstanding.ExecuteScalar()).ToString("F2")
+
+                ' Maintenance Requests
+                Dim cmdMaintenance As New MySqlCommand("SELECT COUNT(*) FROM computers WHERE Status='Maintenance'", conn)
+                lblTotalMaintenance.Text = "🛠 Maintenance Requests: " & cmdMaintenance.ExecuteScalar().ToString()
+            End Using
         Catch ex As Exception
-            MessageBox.Show("Error loading analytics: " & ex.Message)
-        Finally
-            conn.Close()
+            MessageBox.Show(ex.Message)
+        End Try
+    End Sub
+#End Region
+
+#Region "Charts Loading"
+
+    ' 1️⃣ Daily Revenue (Column)
+    Private Sub LoadDailyRevenueChart()
+        Try
+            Using conn As New MySqlConnection("server=localhost;user id=root;password=;database=pacitacmpdb;")
+                conn.Open()
+                Dim cmd As New MySqlCommand("
+                    SELECT CAST(StartTime AS DATE) AS SaleDate, SUM(TotalAmount) AS Revenue
+                    FROM sales
+                    GROUP BY CAST(StartTime AS DATE)
+                    ORDER BY SaleDate ASC", conn)
+                Dim reader = cmd.ExecuteReader()
+
+                ' Ensure series exists
+                If ChartDailyRevenue.Series.IndexOf("Revenue") = -1 Then ChartDailyRevenue.Series.Add("Revenue")
+
+                With ChartDailyRevenue
+                    .Series("Revenue").ChartType = SeriesChartType.Column
+                    .Series("Revenue").Points.Clear()
+                    .Series("Revenue").IsValueShownAsLabel = True
+                    .ChartAreas(0).AxisX.Title = "Date"
+                    .ChartAreas(0).AxisY.Title = "Revenue (₱)"
+                End With
+
+                While reader.Read()
+                    Dim value As Decimal = Convert.ToDecimal(reader("Revenue"))
+                    Dim dateLabel As String = Convert.ToDateTime(reader("SaleDate")).ToString("MMM dd")
+                    Dim idx As Integer = ChartDailyRevenue.Series("Revenue").Points.AddXY(dateLabel, value)
+                    ChartDailyRevenue.Series("Revenue").Points(idx).Label = value.ToString("F2")
+                End While
+            End Using
+        Catch ex As Exception
+            MessageBox.Show(ex.Message)
         End Try
     End Sub
 
-    ' --- DAILY REVENUE ---
-    Private Sub LoadRevenueChart()
-        Dim query As String = "SELECT SaleDate, DailyRevenue FROM salesanalytics ORDER BY SaleDate"
-        da = New MySqlDataAdapter(query, conn)
-        dt = New DataTable()
-        da.Fill(dt)
+    ' 2️⃣ Monthly Revenue (last 6 months)
+    Private Sub LoadMonthlyRevenueChart()
+        Try
+            Using conn As New MySqlConnection("server=localhost;user id=root;password=;database=pacitacmpdb;")
+                conn.Open()
+                Dim cmd As New MySqlCommand("
+                    SELECT DATE_FORMAT(StartTime,'%Y-%m') AS Month, SUM(TotalAmount) AS Revenue
+                    FROM sales
+                    WHERE StartTime >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+                    GROUP BY Month
+                    ORDER BY Month ASC", conn)
+                Dim reader = cmd.ExecuteReader()
 
-        chartRevenue.Series.Clear()
-        Dim series As New Series("Revenue") With {.ChartType = SeriesChartType.Column, .XValueType = ChartValueType.String}
-        chartRevenue.ChartAreas.Clear()
-        chartRevenue.ChartAreas.Add(New ChartArea())
+                If ChartMonthlyRevenue.Series.IndexOf("Revenue") = -1 Then ChartMonthlyRevenue.Series.Add("Revenue")
 
-        For Each row As DataRow In dt.Rows
-            series.Points.AddXY(row("SaleDate").ToString(), Convert.ToDecimal(row("DailyRevenue")))
-        Next
+                With ChartMonthlyRevenue
+                    .Series("Revenue").ChartType = SeriesChartType.Column
+                    .Series("Revenue").Points.Clear()
+                    .Series("Revenue").IsValueShownAsLabel = True
+                    .ChartAreas(0).AxisX.Title = "Month"
+                    .ChartAreas(0).AxisY.Title = "Revenue (₱)"
+                End With
 
-        chartRevenue.Series.Add(series)
-        chartRevenue.ChartAreas(0).AxisX.Title = "Date"
-        chartRevenue.ChartAreas(0).AxisY.Title = "Revenue (₱)"
-        chartRevenue.ChartAreas(0).AxisX.Interval = 1
+                While reader.Read()
+                    Dim value As Decimal = Convert.ToDecimal(reader("Revenue"))
+                    Dim monthLabel As String = Convert.ToDateTime(reader("Month") & "-01").ToString("MMM yyyy")
+                    Dim idx As Integer = ChartMonthlyRevenue.Series("Revenue").Points.AddXY(monthLabel, value)
+                    ChartMonthlyRevenue.Series("Revenue").Points(idx).Label = value.ToString("F2")
+                End While
+            End Using
+        Catch ex As Exception
+            MessageBox.Show(ex.Message)
+        End Try
     End Sub
 
-    ' --- DAILY SESSIONS ---
-    Private Sub LoadSessionsChart()
-        Dim query As String = "SELECT SaleDate, TotalSessions FROM salesanalytics ORDER BY SaleDate"
-        da = New MySqlDataAdapter(query, conn)
-        dt = New DataTable()
-        da.Fill(dt)
-
-        chartSessions.Series.Clear()
-        Dim series As New Series("Sessions") With {.ChartType = SeriesChartType.Line, .XValueType = ChartValueType.String}
-        chartSessions.ChartAreas.Clear()
-        chartSessions.ChartAreas.Add(New ChartArea())
-
-        For Each row As DataRow In dt.Rows
-            series.Points.AddXY(row("SaleDate").ToString(), Convert.ToInt32(row("TotalSessions")))
-        Next
-        chartSessions.Series.Add(series)
-        chartSessions.ChartAreas(0).AxisX.Title = "Date"
-        chartSessions.ChartAreas(0).AxisY.Title = "Number of Sessions"
-    End Sub
-
-    ' --- PC STATUS ---
-    Private Sub LoadPCStatusChart()
-        Dim query As String = "SELECT Status, COUNT(*) AS Count FROM computers GROUP BY Status"
-        da = New MySqlDataAdapter(query, conn)
-        dt = New DataTable()
-        da.Fill(dt)
-
-        chartPCStatus.Series.Clear()
-        Dim series As New Series("PC Status") With {.ChartType = SeriesChartType.Pie}
-        chartPCStatus.ChartAreas.Clear()
-        chartPCStatus.ChartAreas.Add(New ChartArea())
-        chartPCStatus.Legends.Clear()
-        chartPCStatus.Legends.Add(New Legend())
-
-        For Each row As DataRow In dt.Rows
-            series.Points.AddXY(row("Status").ToString(), Convert.ToInt32(row("Count")))
-        Next
-        chartPCStatus.Series.Add(series)
-    End Sub
-
-    ' --- BILLING STATUS ---
-    Private Sub LoadBillingChart()
-        Dim query As String = "SELECT Status, COUNT(*) AS Count FROM billing GROUP BY Status"
-        da = New MySqlDataAdapter(query, conn)
-        dt = New DataTable()
-        da.Fill(dt)
-
-        chartBilling.Series.Clear()
-        Dim series As New Series("Billing") With {.ChartType = SeriesChartType.Pie}
-        chartBilling.ChartAreas.Clear()
-        chartBilling.ChartAreas.Add(New ChartArea())
-        chartBilling.Legends.Clear()
-        chartBilling.Legends.Add(New Legend())
-
-        For Each row As DataRow In dt.Rows
-            series.Points.AddXY(row("Status").ToString(), Convert.ToInt32(row("Count")))
-        Next
-        chartBilling.Series.Add(series)
-    End Sub
-
-    ' --- REPLACEMENT REQUESTS ---
-    Private Sub LoadReplacementChart()
-        Dim query As String = "SELECT Status, COUNT(*) AS Count FROM replacements GROUP BY Status"
-        da = New MySqlDataAdapter(query, conn)
-        dt = New DataTable()
-        da.Fill(dt)
-
-        chartReplacement.Series.Clear()
-        Dim series As New Series("Replacement") With {.ChartType = SeriesChartType.Pie}
-        chartReplacement.ChartAreas.Clear()
-        chartReplacement.ChartAreas.Add(New ChartArea())
-        chartReplacement.Legends.Clear()
-        chartReplacement.Legends.Add(New Legend())
-
-        For Each row As DataRow In dt.Rows
-            series.Points.AddXY(row("Status").ToString(), Convert.ToInt32(row("Count")))
-        Next
-        chartReplacement.Series.Add(series)
-    End Sub
-
-    ' --- SALES PAYMENT STATUS ---
-    Private Sub LoadSalesChart()
-        Dim query As String = "SELECT PaymentStatus, COUNT(*) AS Count FROM sales GROUP BY PaymentStatus"
-        da = New MySqlDataAdapter(query, conn)
-        dt = New DataTable()
-        da.Fill(dt)
-
-        chartSales.Series.Clear()
-        Dim series As New Series("Sales") With {.ChartType = SeriesChartType.Pie}
-        chartSales.ChartAreas.Clear()
-        chartSales.ChartAreas.Add(New ChartArea())
-        chartSales.Legends.Clear()
-        chartSales.Legends.Add(New Legend())
-
-        For Each row As DataRow In dt.Rows
-            series.Points.AddXY(row("PaymentStatus").ToString(), Convert.ToInt32(row("Count")))
-        Next
-        chartSales.Series.Add(series)
-    End Sub
-
-    ' --- USER ROLE DISTRIBUTION ---
-    Private Sub LoadUserRolesChart()
-        Dim query As String = "SELECT Role, COUNT(*) AS Count FROM users GROUP BY Role"
-        da = New MySqlDataAdapter(query, conn)
-        dt = New DataTable()
-        da.Fill(dt)
-
-        chartUserRoles.Series.Clear()
-        Dim series As New Series("Users") With {.ChartType = SeriesChartType.Pie}
-        chartUserRoles.ChartAreas.Clear()
-        chartUserRoles.ChartAreas.Add(New ChartArea())
-        chartUserRoles.Legends.Clear()
-        chartUserRoles.Legends.Add(New Legend())
-
-        For Each row As DataRow In dt.Rows
-            series.Points.AddXY(row("Role").ToString(), Convert.ToInt32(row("Count")))
-        Next
-        chartUserRoles.Series.Add(series)
-    End Sub
-
-    ' --- TOP 5 ACTIVE USERS ---
-    Private Sub LoadTopUsersChart()
-        Dim query As String = "SELECT u.FullName, COUNT(s.SaleID) AS Sessions FROM users u " &
-                              "LEFT JOIN sales s ON u.UserID = s.UserID " &
-                              "GROUP BY u.FullName ORDER BY Sessions DESC LIMIT 5"
-        da = New MySqlDataAdapter(query, conn)
-        dt = New DataTable()
-        da.Fill(dt)
-
-        chartTopUsers.Series.Clear()
-        Dim series As New Series("TopUsers") With {.ChartType = SeriesChartType.Column, .XValueType = ChartValueType.String}
-        chartTopUsers.ChartAreas.Clear()
-        chartTopUsers.ChartAreas.Add(New ChartArea())
-
-        For Each row As DataRow In dt.Rows
-            series.Points.AddXY(row("FullName").ToString(), Convert.ToInt32(row("Sessions")))
-        Next
-        chartTopUsers.Series.Add(series)
-        chartTopUsers.ChartAreas(0).AxisX.Title = "User"
-        chartTopUsers.ChartAreas(0).AxisY.Title = "Sessions"
-        chartTopUsers.ChartAreas(0).AxisX.Interval = 1
-    End Sub
-
-    ' --- TOP 5 PCs BY USAGE ---
-    Private Sub LoadTopPCsChart()
-        Dim query As String = "SELECT c.ComputerName, COUNT(s.SaleID) AS Sessions FROM computers c " &
-                              "LEFT JOIN sales s ON c.ComputerID = s.ComputerID " &
-                              "GROUP BY c.ComputerName ORDER BY Sessions DESC LIMIT 5"
-        da = New MySqlDataAdapter(query, conn)
-        dt = New DataTable()
-        da.Fill(dt)
-
-        chartTopPCs.Series.Clear()
-        Dim series As New Series("TopPCs") With {.ChartType = SeriesChartType.Column, .XValueType = ChartValueType.String}
-        chartTopPCs.ChartAreas.Clear()
-        chartTopPCs.ChartAreas.Add(New ChartArea())
-
-        For Each row As DataRow In dt.Rows
-            series.Points.AddXY(row("ComputerName").ToString(), Convert.ToInt32(row("Sessions")))
-        Next
-        chartTopPCs.Series.Add(series)
-        chartTopPCs.ChartAreas(0).AxisX.Title = "PC Name"
-        chartTopPCs.ChartAreas(0).AxisY.Title = "Sessions"
-        chartTopPCs.ChartAreas(0).AxisX.Interval = 1
-    End Sub
-
-    ' --- PC USAGE STATUS ---
+    ' 3️⃣ PC Usage (Column)
     Private Sub LoadPCUsageChart()
-        Dim query As String = "SELECT Status, COUNT(*) AS Count FROM computers GROUP BY Status"
-        da = New MySqlDataAdapter(query, conn)
-        dt = New DataTable()
-        da.Fill(dt)
+        Try
+            Using conn As New MySqlConnection("server=localhost;user id=root;password=;database=pacitacmpdb;")
+                conn.Open()
+                Dim cmd As New MySqlCommand("
+                    SELECT c.ComputerName, COUNT(s.SaleID) AS Sessions
+                    FROM computers c
+                    LEFT JOIN sales s ON c.ComputerID = s.ComputerID
+                    GROUP BY c.ComputerID", conn)
+                Dim reader = cmd.ExecuteReader()
 
-        chartPCUsage.Series.Clear()
-        Dim series As New Series("PCUsage") With {.ChartType = SeriesChartType.Pie}
-        chartPCUsage.ChartAreas.Clear()
-        chartPCUsage.ChartAreas.Add(New ChartArea())
-        chartPCUsage.Legends.Clear()
-        chartPCUsage.Legends.Add(New Legend())
+                If ChartPCUsage.Series.IndexOf("PCUsage") = -1 Then ChartPCUsage.Series.Add("PCUsage")
 
-        For Each row As DataRow In dt.Rows
-            series.Points.AddXY(row("Status").ToString(), Convert.ToInt32(row("Count")))
-        Next
-        chartPCUsage.Series.Add(series)
+                With ChartPCUsage
+                    .Series("PCUsage").ChartType = SeriesChartType.Column
+                    .Series("PCUsage").Points.Clear()
+                    .Series("PCUsage").IsValueShownAsLabel = True
+                    .ChartAreas(0).AxisX.Title = "Computer"
+                    .ChartAreas(0).AxisY.Title = "Sessions"
+                End With
+
+                While reader.Read()
+                    Dim value As Integer = Convert.ToInt32(reader("Sessions"))
+                    Dim computerName As String = reader("ComputerName").ToString()
+                    Dim idx As Integer = ChartPCUsage.Series("PCUsage").Points.AddXY(computerName, value)
+                    ChartPCUsage.Series("PCUsage").Points(idx).Label = value.ToString()
+                End While
+            End Using
+        Catch ex As Exception
+            MessageBox.Show(ex.Message)
+        End Try
     End Sub
+
+    ' 4️⃣ Billing Status (Pie)
+    Private Sub LoadBillingStatusChart()
+        Try
+            Using conn As New MySqlConnection("server=localhost;user id=root;password=;database=pacitacmpdb;")
+                conn.Open()
+                Dim cmd As New MySqlCommand("
+                    SELECT Status, COUNT(*) AS CountStatus
+                    FROM billing
+                    GROUP BY Status", conn)
+                Dim reader = cmd.ExecuteReader()
+
+                If ChartBillingStatus.Series.IndexOf("Billing") = -1 Then ChartBillingStatus.Series.Add("Billing")
+
+                With ChartBillingStatus
+                    .Series("Billing").ChartType = SeriesChartType.Pie
+                    .Series("Billing").Points.Clear()
+                    .Series("Billing").IsValueShownAsLabel = True
+                End With
+
+                While reader.Read()
+                    Dim value As Integer = Convert.ToInt32(reader("CountStatus"))
+                    Dim status As String = reader("Status").ToString()
+                    Dim idx As Integer = ChartBillingStatus.Series("Billing").Points.AddXY(status, value)
+                    ChartBillingStatus.Series("Billing").Points(idx).Label = status & " (" & value.ToString() & ")"
+                End While
+            End Using
+        Catch ex As Exception
+            MessageBox.Show(ex.Message)
+        End Try
+    End Sub
+
+    ' 5️⃣ Replacement / Maintenance Requests (Pie)
+    Private Sub LoadReplacementMaintenanceChart()
+        Try
+            Using conn As New MySqlConnection("server=localhost;user id=root;password=;database=pacitacmpdb;")
+                conn.Open()
+                Dim cmd As New MySqlCommand("
+                    SELECT Status, COUNT(*) AS CountStatus
+                    FROM replacements
+                    GROUP BY Status", conn)
+                Dim reader = cmd.ExecuteReader()
+
+                If ChartReplacement.Series.IndexOf("Replacement") = -1 Then ChartReplacement.Series.Add("Replacement")
+
+                With ChartReplacement
+                    .Series("Replacement").ChartType = SeriesChartType.Pie
+                    .Series("Replacement").Points.Clear()
+                    .Series("Replacement").IsValueShownAsLabel = True
+                End With
+
+                While reader.Read()
+                    Dim value As Integer = Convert.ToInt32(reader("CountStatus"))
+                    Dim status As String = reader("Status").ToString()
+                    Dim idx As Integer = ChartReplacement.Series("Replacement").Points.AddXY(status, value)
+                    ChartReplacement.Series("Replacement").Points(idx).Label = status & " (" & value.ToString() & ")"
+                End While
+            End Using
+        Catch ex As Exception
+            MessageBox.Show(ex.Message)
+        End Try
+    End Sub
+
+#End Region
+
+#Region "Pending Tables"
+
+    Private Sub LoadPendingBilling()
+        Try
+            Using conn As New MySqlConnection("server=localhost;user id=root;password=;database=pacitacmpdb;")
+                conn.Open()
+                Dim da As New MySqlDataAdapter("
+                    SELECT b.BillID, s.SaleID, b.Amount, b.Status 
+                    FROM billing b 
+                    LEFT JOIN sales s ON b.SaleID = s.SaleID 
+                    WHERE b.Status='Pending'", conn)
+                Dim dt As New DataTable()
+                da.Fill(dt)
+                dgvPendingBilling.DataSource = dt
+            End Using
+        Catch ex As Exception
+            MessageBox.Show(ex.Message)
+        End Try
+    End Sub
+
+    Private Sub LoadReplacementRequests()
+        Try
+            Using conn As New MySqlConnection("server=localhost;user id=root;password=;database=pacitacmpdb;")
+                conn.Open()
+                Dim da As New MySqlDataAdapter("
+                    SELECT ReplacementID, ComputerID, ItemName, Status, Cost 
+                    FROM replacements 
+                    WHERE Status='Pending'", conn)
+                Dim dt As New DataTable()
+                da.Fill(dt)
+                dgvReplacementRequests.DataSource = dt
+            End Using
+        Catch ex As Exception
+            MessageBox.Show(ex.Message)
+        End Try
+    End Sub
+
+#End Region
+
 End Class

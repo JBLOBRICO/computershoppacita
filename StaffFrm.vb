@@ -48,4 +48,31 @@ Public Class StaffFrm
     Private Sub pnlHeader_Paint(sender As Object, e As PaintEventArgs) Handles pnlHeader.Paint
 
     End Sub
+
+    Private Sub btnLogout_Click(sender As Object, e As EventArgs) Handles btnLogout.Click
+        ' Check if the current child form is Sessionfrm
+        Dim sessionForm As sessionfrm = Nothing
+
+        For Each ctrl As Control In pnlMain.Controls
+            If TypeOf ctrl Is sessionfrm Then
+                sessionForm = CType(ctrl, sessionfrm)
+                Exit For
+            End If
+        Next
+
+        ' If Sessionfrm is open, check CanLogout
+        If sessionForm IsNot Nothing Then
+            If Not sessionForm.CanLogout() Then
+                ' Active sessions exist, prevent logout
+                Return
+            End If
+        End If
+
+        ' Confirm logout
+        If MsgBox("Are you sure you want to logout?", vbQuestion + vbYesNo, "Logout") = vbYes Then
+            Me.Close()
+            Form1.Show()
+        End If
+    End Sub
+
 End Class
