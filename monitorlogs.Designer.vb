@@ -1,5 +1,5 @@
 ﻿<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()>
-Partial Class monitorlogs
+Partial Class MonitorLogs
     Inherits System.Windows.Forms.Form
 
     Private components As System.ComponentModel.IContainer

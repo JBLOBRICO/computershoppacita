@@ -41,4 +41,12 @@
     Private Sub pnlMain_Paint(sender As Object, e As PaintEventArgs) Handles pnlMain.Paint
 
     End Sub
+
+    Private Sub btnLogout_Click(sender As Object, e As EventArgs) Handles btnLogout.Click
+
+        If MsgBox("Are you sure you want to logout?", vbYesNo Or vbQuestion, "Confirmation") = vbYes Then
+            Me.Close()
+            Form1.Show()
+        End If
+    End Sub
 End Class

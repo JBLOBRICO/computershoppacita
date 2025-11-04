@@ -135,6 +135,7 @@ Partial Class frmAddBillingRequest
         Me.cmbStatus.Name = "cmbStatus"
         Me.cmbStatus.Size = New System.Drawing.Size(241, 28)
         Me.cmbStatus.TabIndex = 4
+        Me.cmbStatus.Visible = False
         '
         'lblCategory
         '
