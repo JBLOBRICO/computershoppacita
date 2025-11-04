@@ -1,4 +1,5 @@
-﻿Imports Mysqlx.XDevAPI
+﻿Imports MySql.Data.MySqlClient
+Imports Mysqlx.XDevAPI
 
 Public Class StaffFrm
     Private Sub LoadChildForm(childForm As Form)
@@ -50,26 +51,28 @@ Public Class StaffFrm
     End Sub
 
     Private Sub btnLogout_Click(sender As Object, e As EventArgs) Handles btnLogout.Click
-        ' Check if the current child form is Sessionfrm
-        Dim sessionForm As sessionfrm = Nothing
+        ' Get the open Sessionfrm in pnlMain
+        Dim sessionForm As sessionfrm = pnlMain.Controls.OfType(Of sessionfrm)().FirstOrDefault()
 
-        For Each ctrl As Control In pnlMain.Controls
-            If TypeOf ctrl Is sessionfrm Then
-                sessionForm = CType(ctrl, sessionfrm)
-                Exit For
-            End If
-        Next
-
-        ' If Sessionfrm is open, check CanLogout
+        ' Check if sessionForm exists
         If sessionForm IsNot Nothing Then
-            If Not sessionForm.CanLogout() Then
-                ' Active sessions exist, prevent logout
+            ' Ensure CanLogout() exists and check active sessions
+            Dim canLogout As Boolean
+            Try
+                canLogout = sessionForm.CanLogout()
+            Catch ex As Exception
+                MessageBox.Show("Cannot check active sessions: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                Return
+            End Try
+
+            If Not canLogout Then
+                MessageBox.Show("Cannot logout while PCs have active sessions.", "Active Sessions", MessageBoxButtons.OK, MessageBoxIcon.Warning)
                 Return
             End If
         End If
 
         ' Confirm logout
-        If MsgBox("Are you sure you want to logout?", vbQuestion + vbYesNo, "Logout") = vbYes Then
+        If MessageBox.Show("Are you sure you want to logout?", "Logout", MessageBoxButtons.YesNo, MessageBoxIcon.Question) = DialogResult.Yes Then
             Me.Close()
             Form1.Show()
         End If
@@ -78,6 +81,25 @@ Public Class StaffFrm
     Private Sub lblStaffName_Click(sender As Object, e As EventArgs) Handles lblStaffName.Click
 
     End Sub
+    ' ====== CAN LOGOUT PROPERTY BASED ON DATABASE ======
+    Public ReadOnly Property CanLogout As Boolean
+        Get
+            Try
+                OpenConnection()
+                ' Check if there are any active fixed sessions in the database
+                Dim query As String = "SELECT COUNT(*) FROM sales WHERE EndTime IS NULL AND TotalAmount > 0"
+                cmd = New MySqlCommand(query, conn)
+                Dim activeFixedSessions As Integer = Convert.ToInt32(cmd.ExecuteScalar())
+                Return activeFixedSessions = 0
+            Catch ex As Exception
+                MessageBox.Show("Error checking active sessions: " & ex.Message)
+                ' Fail-safe: prevent logout if error occurs
+                Return False
+            Finally
+                CloseConnection()
+            End Try
+        End Get
+    End Property
 
     Private Sub StaffFrm_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         Try
