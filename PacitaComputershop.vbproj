@@ -189,6 +189,12 @@
     <Compile Include="frmSystemMonitor.vb">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="monitorlogs.Designer.vb">
+      <DependentUpon>monitorlogs.vb</DependentUpon>
+    </Compile>
+    <Compile Include="monitorlogs.vb">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="My Project\AssemblyInfo.vb" />
     <Compile Include="My Project\Application.Designer.vb">
       <AutoGen>True</AutoGen>
@@ -216,6 +222,12 @@
     <Compile Include="ownerfrm.vb">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="pcmanagement.Designer.vb">
+      <DependentUpon>pcmanagement.vb</DependentUpon>
+    </Compile>
+    <Compile Include="pcmanagement.vb">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="sessionfrm.Designer.vb">
       <DependentUpon>sessionfrm.vb</DependentUpon>
     </Compile>
@@ -226,6 +238,12 @@
       <DependentUpon>StaffFrm.vb</DependentUpon>
     </Compile>
     <Compile Include="StaffFrm.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="staffmanagement.Designer.vb">
+      <DependentUpon>staffmanagement.vb</DependentUpon>
+    </Compile>
+    <Compile Include="staffmanagement.vb">
       <SubType>Form</SubType>
     </Compile>
   </ItemGroup>
@@ -260,6 +278,9 @@
     <EmbeddedResource Include="frmSystemMonitor.resx">
       <DependentUpon>frmSystemMonitor.vb</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="monitorlogs.resx">
+      <DependentUpon>monitorlogs.vb</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="My Project\Resources.resx">
       <Generator>VbMyResourcesResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.vb</LastGenOutput>
@@ -272,11 +293,17 @@
     <EmbeddedResource Include="ownerfrm.resx">
       <DependentUpon>ownerfrm.vb</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="pcmanagement.resx">
+      <DependentUpon>pcmanagement.vb</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="sessionfrm.resx">
       <DependentUpon>sessionfrm.vb</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="StaffFrm.resx">
       <DependentUpon>StaffFrm.vb</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="staffmanagement.resx">
+      <DependentUpon>staffmanagement.vb</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
