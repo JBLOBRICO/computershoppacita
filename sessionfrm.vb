@@ -10,6 +10,7 @@ Public Class sessionfrm
     Private PCStartTimes As New Dictionary(Of Integer, DateTime)
     Private PCFixedSessions As New Dictionary(Of Integer, Boolean)
     Private PCDurations As New Dictionary(Of Integer, TimeSpan)
+    Private ActiveSalesIDs As New Dictionary(Of Integer, Integer) ' ✅ store SaleID para sure update
     Private isLoading As Boolean = False
 
     ' ====== FORM LOAD ======
@@ -94,7 +95,7 @@ Public Class sessionfrm
         If btn Is Nothing OrElse btn.Tag Is Nothing Then Return
 
         SelectedPCID = CInt(btn.Tag)
-        SelectedPCName = btn.Text.Split(vbLf)(0) ' Only base name
+        SelectedPCName = btn.Text.Split(vbLf)(0)
         lblPCName.Text = "PC Name: " & SelectedPCName
         lblStatus.Text = "Status: " & If(PCStatus.ContainsKey(SelectedPCID), PCStatus(SelectedPCID), "Unknown")
         UpdateTimerLabel(SelectedPCID)
@@ -148,12 +149,6 @@ Public Class sessionfrm
             PCFixedSessions(SelectedPCID) = False
         End If
 
-        If PCStartTimes.ContainsKey(SelectedPCID) Then
-            MessageBox.Show("This PC already has an active session.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning)
-            Return
-        End If
-
-        ' --- SAVE START TIME TO DATABASE ---
         Dim startTime As DateTime = DateTime.Now
         OpenConnection()
         Dim insertQuery As String = "INSERT INTO sales (ComputerID, UserID, StartTime, RatePerHour, PaymentStatus) VALUES (@ComputerID,@UserID,@StartTime,@RatePerHour,'Unpaid')"
@@ -163,12 +158,16 @@ Public Class sessionfrm
         cmd.Parameters.AddWithValue("@StartTime", startTime)
         cmd.Parameters.AddWithValue("@RatePerHour", ratePerHour)
         cmd.ExecuteNonQuery()
+
+        ' ✅ Get the new SaleID
+        Dim saleID As Integer = CInt(cmd.LastInsertedId)
+        ActiveSalesIDs(SelectedPCID) = saleID
+
         CloseConnection()
 
         PCStartTimes(SelectedPCID) = startTime
         If Not PCDurations.ContainsKey(SelectedPCID) Then PCDurations(SelectedPCID) = TimeSpan.Zero
         PCStatus(SelectedPCID) = "In Use"
-
         LoadComputers()
 
         ' Send command to client
@@ -206,17 +205,18 @@ Public Class sessionfrm
             totalAmount = Math.Round(CDec(elapsed.TotalHours * ratePerHour), 2)
         End If
 
-        ' Update sales table
+        ' ✅ Update by SaleID (guaranteed match)
         OpenConnection()
-        Dim updateQuery As String = "UPDATE sales SET EndTime=@EndTime, TotalAmount=@TotalAmount, PaymentStatus='Unpaid' WHERE ComputerID=@ComputerID AND StartTime=@StartTime"
+        Dim updateQuery As String = "UPDATE sales SET EndTime=@EndTime, TotalAmount=@TotalAmount, PaymentStatus='Paid' WHERE SaleID=@SaleID"
         cmd = New MySqlCommand(updateQuery, conn)
         cmd.Parameters.AddWithValue("@EndTime", endTime)
         cmd.Parameters.AddWithValue("@TotalAmount", totalAmount)
-        cmd.Parameters.AddWithValue("@ComputerID", pcID)
-        cmd.Parameters.AddWithValue("@StartTime", startTime)
+        cmd.Parameters.AddWithValue("@SaleID", ActiveSalesIDs(pcID))
         cmd.ExecuteNonQuery()
         CloseConnection()
 
+        ' cleanup
+        ActiveSalesIDs.Remove(pcID)
         PCStartTimes.Remove(pcID)
         If PCFixedSessions.ContainsKey(pcID) Then PCFixedSessions.Remove(pcID)
         If PCDurations.ContainsKey(pcID) Then PCDurations.Remove(pcID)
@@ -314,5 +314,8 @@ Public Class sessionfrm
 
     Private Sub CloseConnection()
         If conn.State <> ConnectionState.Closed Then conn.Close()
+    End Sub
+
+    Private Sub pnlComputers_Paint(sender As Object, e As PaintEventArgs) Handles pnlComputers.Paint
     End Sub
 End Class
