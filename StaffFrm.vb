@@ -75,4 +75,22 @@ Public Class StaffFrm
         End If
     End Sub
 
+    Private Sub lblStaffName_Click(sender As Object, e As EventArgs) Handles lblStaffName.Click
+
+    End Sub
+
+    Private Sub StaffFrm_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+        Try
+            ' Display the currently logged-in staff name
+            If Not String.IsNullOrEmpty(LoggedInFullName) Then
+                lblStaffName.Text = "Welcome, " & LoggedInFullName
+            ElseIf Not String.IsNullOrEmpty(loginusername) Then
+                lblStaffName.Text = "Welcome, " & loginusername
+            Else
+                lblStaffName.Text = "Welcome, Staff"
+            End If
+        Catch ex As Exception
+            lblStaffName.Text = "Welcome, Staff"
+        End Try
+    End Sub
 End Class

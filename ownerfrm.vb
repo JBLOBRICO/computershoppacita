@@ -51,4 +51,20 @@
             Form1.Show()
         End If
     End Sub
+
+    Private Sub ownerfrm_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+        Try
+            ' Display the currently logged-in staff name
+            If Not String.IsNullOrEmpty(LoggedInFullName) Then
+                lblOwnerName.Text = "Welcome, " & LoggedInFullName
+            ElseIf Not String.IsNullOrEmpty(loginusername) Then
+                lblOwnerName.Text = "Welcome, " & loginusername
+            Else
+                lblOwnerName.Text = "Welcome, Staff"
+            End If
+        Catch ex As Exception
+            lblOwnerName.Text = "Welcome, Staff"
+        End Try
+    End Sub
+
 End Class
