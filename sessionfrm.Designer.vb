@@ -164,9 +164,9 @@ Partial Class sessionfrm
         Me.lblExtraMinutes.Font = New System.Drawing.Font("Segoe UI", 12.0!)
         Me.lblExtraMinutes.Location = New System.Drawing.Point(8, 220)
         Me.lblExtraMinutes.Name = "lblExtraMinutes"
-        Me.lblExtraMinutes.Size = New System.Drawing.Size(101, 21)
+        Me.lblExtraMinutes.Size = New System.Drawing.Size(98, 21)
         Me.lblExtraMinutes.TabIndex = 13
-        Me.lblExtraMinutes.Text = "Add Minutes:"
+        Me.lblExtraMinutes.Text = "Add Amount"
         '
         'txtExtraMinutes
         '

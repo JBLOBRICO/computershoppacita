@@ -2,48 +2,48 @@
 Partial Class ClientListener
     Inherits System.Windows.Forms.Form
 
-    'Form overrides dispose to clean up the component list.
-    <System.Diagnostics.DebuggerNonUserCode()>
-    Protected Overrides Sub Dispose(ByVal disposing As Boolean)
-        Try
-            If disposing AndAlso components IsNot Nothing Then
-                components.Dispose()
-            End If
-        Finally
-            MyBase.Dispose(disposing)
-        End Try
-    End Sub
-
-    'Required by the Windows Form Designer
     Private components As System.ComponentModel.IContainer
 
-    ' NOTE: The following procedure is required by the Windows Form Designer
-    ' It can be modified using the Windows Form Designer.  
-    ' Do not modify it using the code editor.
     <System.Diagnostics.DebuggerStepThrough()>
     Private Sub InitializeComponent()
         Me.components = New System.ComponentModel.Container()
-        Me.listenTimer = New System.Windows.Forms.Timer(Me.components)
+        Me.pnlTimer = New System.Windows.Forms.Panel()
+        Me.lblTimer = New System.Windows.Forms.Label()
         Me.SuspendLayout()
         '
-        'listenTimer
+        'pnlTimer
         '
-        Me.listenTimer.Interval = 1000
+        Me.pnlTimer.BackColor = System.Drawing.Color.Gray
+        Me.pnlTimer.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle
+        Me.pnlTimer.Location = New System.Drawing.Point(20, 20)
+        Me.pnlTimer.Name = "pnlTimer"
+        Me.pnlTimer.Size = New System.Drawing.Size(260, 60)
+        Me.pnlTimer.TabIndex = 0
+        Me.pnlTimer.Padding = New Padding(5)
+        Me.pnlTimer.Controls.Add(Me.lblTimer)
+        '
+        'lblTimer
+        '
+        Me.lblTimer.Dock = System.Windows.Forms.DockStyle.Fill
+        Me.lblTimer.Font = New System.Drawing.Font("Segoe UI", 16.0!, System.Drawing.FontStyle.Bold)
+        Me.lblTimer.ForeColor = System.Drawing.Color.White
+        Me.lblTimer.TextAlign = System.Drawing.ContentAlignment.MiddleCenter
+        Me.lblTimer.Text = "Usage Time: 00:00 | ₱0.00"
         '
         'ClientListener
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
-        Me.ClientSize = New System.Drawing.Size(300, 200)
+        Me.ClientSize = New System.Drawing.Size(300, 120)
+        Me.Controls.Add(Me.pnlTimer)
         Me.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow
         Me.Name = "ClientListener"
-        Me.ShowInTaskbar = False
         Me.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen
         Me.Text = "Client Listener"
         Me.TopMost = True
         Me.ResumeLayout(False)
-
     End Sub
 
-    Friend WithEvents listenTimer As System.Windows.Forms.Timer
+    Friend WithEvents pnlTimer As Panel
+    Friend WithEvents lblTimer As Label
 End Class

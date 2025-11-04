@@ -1,4 +1,5 @@
 ﻿Imports MySql.Data.MySqlClient
+Imports System.Threading
 
 Public Class sessionfrm
     ' ====== CONFIG ======
@@ -126,6 +127,67 @@ Public Class sessionfrm
         End Try
     End Sub
 
+    ' ====== ADD AMOUNT / EXTEND SESSION ======
+    Private Sub btnAddMinutes_Click(sender As Object, e As EventArgs)
+        Try
+            If SelectedPCID = -1 Then
+                MessageBox.Show("Please select a PC first.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                Return
+            End If
+
+            If Not PCFixedSessions.ContainsKey(SelectedPCID) OrElse Not PCFixedSessions(SelectedPCID) Then
+                MessageBox.Show("Add amount is only allowed for fixed sessions.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                Return
+            End If
+
+            ' Validate input
+            Dim additionalAmount As Decimal = 0
+            If String.IsNullOrWhiteSpace(txtSales.Text) OrElse Not Decimal.TryParse(txtSales.Text, additionalAmount) Then
+                MessageBox.Show("Enter a valid numeric amount to add.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                Return
+            End If
+
+            If additionalAmount <= 0 Then
+                MessageBox.Show("Amount must be greater than 0.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                Return
+            End If
+
+            ' Calculate extra minutes
+            Dim extraMinutes As Double = (additionalAmount / ratePerHour) * 60
+            If PCDurations.ContainsKey(SelectedPCID) Then
+                PCDurations(SelectedPCID) = PCDurations(SelectedPCID).Add(TimeSpan.FromMinutes(extraMinutes))
+            Else
+                PCDurations(SelectedPCID) = TimeSpan.FromMinutes(extraMinutes)
+            End If
+
+            ' Update sales table: increment TotalAmount
+            Try
+                OpenConnection()
+                Dim updateQuery As String = "UPDATE sales SET TotalAmount = IFNULL(TotalAmount, 0) + @AddAmount " &
+                                        "WHERE ComputerID=@ComputerID AND EndTime IS NULL"
+                cmd = New MySqlCommand(updateQuery, conn)
+                cmd.Parameters.AddWithValue("@AddAmount", additionalAmount)
+                cmd.Parameters.AddWithValue("@ComputerID", SelectedPCID)
+                cmd.ExecuteNonQuery()
+            Catch ex As Exception
+                MessageBox.Show("Failed to update session amount in database: " & ex.Message)
+            Finally
+                CloseConnection()
+            End Try
+
+            ' Send command to client to extend session
+            SendCommand(SelectedPCID, "extend_session", extraMinutes.ToString())
+
+            ' Reset input
+            txtSales.Clear()
+            MessageBox.Show("Session extended by ₱" & additionalAmount.ToString("F2") & " (" & extraMinutes.ToString("F0") & " mins).", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            UpdateTimerLabel(SelectedPCID)
+
+        Catch ex As Exception
+            MessageBox.Show("Error adding amount: " & ex.Message)
+        End Try
+    End Sub
+
     ' ====== SEND COMMAND TO CLIENT ======
     Private Sub SendCommand(PCID As Integer, commandType As String, Optional param As String = "")
         Try
@@ -198,13 +260,35 @@ Public Class sessionfrm
                 Return
             End If
 
+            ' ====== Store start session in DB ======
+            Try
+                OpenConnection()
+                Dim insertQuery As String = "INSERT INTO sales (ComputerID, UserID, StartTime, RatePerHour, PaymentStatus) " &
+                                            "VALUES (@ComputerID, @UserID, @StartTime, @RatePerHour, 'Unpaid')"
+                cmd = New MySqlCommand(insertQuery, conn)
+                cmd.Parameters.AddWithValue("@ComputerID", SelectedPCID)
+                cmd.Parameters.AddWithValue("@UserID", 1002) ' <-- replace with logged-in user
+                cmd.Parameters.AddWithValue("@StartTime", DateTime.Now)
+                cmd.Parameters.AddWithValue("@RatePerHour", ratePerHour)
+                cmd.ExecuteNonQuery()
+            Catch ex As Exception
+                MessageBox.Show("Failed to insert session into database: " & ex.Message)
+            Finally
+                CloseConnection()
+            End Try
+
             PCStartTimes(SelectedPCID) = DateTime.Now
             PCStatus(SelectedPCID) = "In Use"
             LoadComputers()
             UpdateTimerLabel(SelectedPCID)
 
-            ' ✅ Send command to client to start session
-            SendCommand(SelectedPCID, "start_session")
+            ' Send command to client
+            If sessionType = "Fixed" Then
+                Dim minutes As Integer = CInt(PCDurations(SelectedPCID).TotalMinutes)
+                SendCommand(SelectedPCID, "fixed_session", minutes.ToString())
+            Else
+                SendCommand(SelectedPCID, "start_session")
+            End If
 
             MessageBox.Show("Session started for " & SelectedPCName)
         Catch ex As Exception
@@ -229,79 +313,11 @@ Public Class sessionfrm
                 Return
             End If
 
-            ' ✅ Send command to client to end session
+            ' Send command to client to end session
             SendCommand(SelectedPCID, "end_session")
-
             EndSession(SelectedPCID)
         Catch ex As Exception
             MessageBox.Show("Error ending session: " & ex.Message)
-        End Try
-    End Sub
-
-    ' ====== ADD EXTRA MINUTES ======
-    Private Sub btnAddMinutes_Click(sender As Object, e As EventArgs)
-        Try
-            If SelectedPCID = -1 Then
-                MessageBox.Show("Please select a PC first.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning)
-                Return
-            End If
-            If String.IsNullOrWhiteSpace(txtExtraMinutes.Text) Then
-                MessageBox.Show("Enter extra minutes value.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning)
-                Return
-            End If
-
-            Dim extra As Integer
-            If Integer.TryParse(txtExtraMinutes.Text, extra) AndAlso extra > 0 Then
-                If PCFixedSessions.ContainsKey(SelectedPCID) AndAlso PCFixedSessions(SelectedPCID) Then
-                    PCDurations(SelectedPCID) = PCDurations(SelectedPCID).Add(TimeSpan.FromMinutes(extra))
-                    MessageBox.Show(extra & " minutes added.")
-                Else
-                    MessageBox.Show("Extra minutes can only be added to Fixed sessions.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning)
-                End If
-            Else
-                MessageBox.Show("Enter a valid positive number for extra minutes.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning)
-            End If
-            txtExtraMinutes.Clear()
-        Catch ex As Exception
-            MessageBox.Show("Error adding minutes: " & ex.Message)
-        End Try
-    End Sub
-
-    ' ====== TIMER TICK ======
-    Private Sub sessionTimer_Tick(sender As Object, e As EventArgs) Handles sessionTimer.Tick
-        Try
-            For Each pcID In PCStartTimes.Keys.ToList()
-                Dim elapsed As TimeSpan = DateTime.Now - PCStartTimes(pcID)
-                Dim totalAmount As Decimal = Math.Round(CDec(elapsed.TotalHours) * ratePerHour, 2)
-
-                For Each ctrl As Control In pnlComputers.Controls
-                    If TypeOf ctrl Is Button AndAlso ctrl.Tag IsNot Nothing AndAlso CInt(ctrl.Tag) = pcID Then
-                        ctrl.Text = $"{SelectedPCName}{vbLf}{elapsed:hh\:mm\:ss} | ₱{totalAmount:F2}"
-                    End If
-                Next
-
-                If pcID = SelectedPCID Then
-                    lblTimer.Text = $"Usage Time: {elapsed:hh\:mm\:ss} | ₱{totalAmount:F2}"
-                End If
-
-                If PCFixedSessions.ContainsKey(pcID) AndAlso PCFixedSessions(pcID) Then
-                    Dim duration As TimeSpan = PCDurations(pcID)
-                    Dim remaining As TimeSpan = duration - elapsed
-
-                    If remaining.TotalMinutes <= 5 AndAlso Not notificationShown(pcID) Then
-                        MessageBox.Show("⏰ 5 minutes left on this session!", "Reminder", MessageBoxButtons.OK, MessageBoxIcon.Information)
-                        notificationShown(pcID) = True
-                    End If
-
-                    If elapsed >= duration Then
-                        ' ✅ Send end_session command automatically
-                        SendCommand(pcID, "end_session")
-                        EndSession(pcID, autoEnd:=True)
-                    End If
-                End If
-            Next
-        Catch ex As Exception
-            ' Prevent timer crash
         End Try
     End Sub
 
@@ -313,6 +329,23 @@ Public Class sessionfrm
             Dim elapsed As TimeSpan = DateTime.Now - PCStartTimes(pcID)
             Dim totalAmount As Decimal = Math.Round(CDec(elapsed.TotalHours) * ratePerHour, 2)
 
+            ' ====== Store end session in DB ======
+            Try
+                OpenConnection()
+                Dim updateQuery As String = "UPDATE sales SET EndTime=@EndTime, TotalAmount=@TotalAmount " &
+                                            "WHERE ComputerID=@ComputerID AND EndTime IS NULL"
+                cmd = New MySqlCommand(updateQuery, conn)
+                cmd.Parameters.AddWithValue("@EndTime", DateTime.Now)
+                cmd.Parameters.AddWithValue("@TotalAmount", totalAmount)
+                cmd.Parameters.AddWithValue("@ComputerID", pcID)
+                cmd.ExecuteNonQuery()
+            Catch ex As Exception
+                MessageBox.Show("Failed to update session in database: " & ex.Message)
+            Finally
+                CloseConnection()
+            End Try
+
+            ' Clean up
             PCStartTimes.Remove(pcID)
             If PCFixedSessions.ContainsKey(pcID) Then PCFixedSessions.Remove(pcID)
             If PCDurations.ContainsKey(pcID) Then PCDurations.Remove(pcID)
@@ -345,114 +378,15 @@ Public Class sessionfrm
         Catch
         End Try
     End Sub
-
-    ' ====== SHUTDOWN PC ======
-    ' ====== SHUTDOWN & SEND MESSAGE VALIDATION COMBINED ======
-
-    ' ====== SHUTDOWN PC ======
-    Private Sub btnShutdown_Click(sender As Object, e As EventArgs) Handles btnShutdown.Click
-        Try
-            ' ✅ Validation: PC must be selected
-            If SelectedPCID = -1 Then
-                MessageBox.Show("Please select a PC first.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning)
-                Return
-            End If
-
-            ' ✅ Validation: Check PC status exists
-            If Not PCStatus.ContainsKey(SelectedPCID) Then
-                MessageBox.Show("Invalid PC selected.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning)
-                Return
-            End If
-
-            Dim status = PCStatus(SelectedPCID)
-
-            ' ✅ Validation: Cannot shutdown if PC under maintenance
-            If status = "Maintenance" Then
-                MessageBox.Show("Cannot shutdown. PC is under maintenance.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning)
-                Return
-            End If
-
-            ' ✅ Validation: Warning if PC is not in use
-            If Not PCStartTimes.ContainsKey(SelectedPCID) Then
-                Dim confirm As DialogResult = MessageBox.Show("This PC is not in use. Do you still want to shutdown?",
-                                                          "Confirm Shutdown", MessageBoxButtons.YesNo, MessageBoxIcon.Question)
-                If confirm = DialogResult.No Then Return
-            End If
-
-            ' ✅ Send shutdown command
-            SendCommand(SelectedPCID, "shutdown")
-            MessageBox.Show("Shutdown command sent to " & SelectedPCName, "Success", MessageBoxButtons.OK, MessageBoxIcon.Information)
-        Catch ex As Exception
-            MessageBox.Show("Error sending shutdown: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
-        End Try
-    End Sub
-
-    ' ====== SEND MESSAGE ======
-    Private Sub btnSendMsg_Click(sender As Object, e As EventArgs) Handles btnSendMsg.Click
-        Try
-            ' ✅ Validation: PC must be selected
-            If SelectedPCID = -1 Then
-                MessageBox.Show("Please select a PC first.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning)
-                Return
-            End If
-
-            ' ✅ Validation: Check PC status exists
-            If Not PCStatus.ContainsKey(SelectedPCID) Then
-                MessageBox.Show("Invalid PC selected.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning)
-                Return
-            End If
-
-            Dim status = PCStatus(SelectedPCID)
-
-            ' ✅ Validation: Cannot send message if PC under maintenance
-            If status = "Maintenance" Then
-                MessageBox.Show("Cannot send message. PC is under maintenance.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning)
-                Return
-            End If
-
-            ' ✅ Validation: Warning if PC is not in use
-            If Not PCStartTimes.ContainsKey(SelectedPCID) Then
-                Dim confirm As DialogResult = MessageBox.Show("This PC is not currently in use. Do you still want to send a message?",
-                                                          "Confirm Message", MessageBoxButtons.YesNo, MessageBoxIcon.Question)
-                If confirm = DialogResult.No Then Return
-            End If
-
-            ' ✅ Validation: Message cannot be empty
-            If String.IsNullOrWhiteSpace(txtMessage.Text) Then
-                MessageBox.Show("Enter a message first.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning)
-                Return
-            End If
-
-            ' ✅ Optional: Maximum message length
-            If txtMessage.Text.Length > 250 Then
-                MessageBox.Show("Message cannot exceed 250 characters.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning)
-                Return
-            End If
-
-            ' ✅ Send message command
-            SendCommand(SelectedPCID, "message", txtMessage.Text.Trim())
-            MessageBox.Show("Message sent to " & SelectedPCName, "Success", MessageBoxButtons.OK, MessageBoxIcon.Information)
-            txtMessage.Clear()
-        Catch ex As Exception
-            MessageBox.Show("Error sending message: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
-        End Try
-    End Sub
-
-
-    ' ====== LOGOUT HANDLING ======
-    Public Function CanLogout() As Boolean
-        Try
-            If PCStartTimes.Count > 0 Then
-                MessageBox.Show("Cannot logout while PCs have active sessions.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+    Public ReadOnly Property CanLogout As Boolean
+        Get
+            ' For example, you may want to prevent logout for fixed sessions in progress
+            If SelectedPCID <> -1 AndAlso PCFixedSessions.ContainsKey(SelectedPCID) AndAlso PCFixedSessions(SelectedPCID) Then
                 Return False
             End If
             Return True
-        Catch
-            Return False
-        End Try
-    End Function
-
+        End Get
+    End Property
     Private Sub pnlComputers_Paint(sender As Object, e As PaintEventArgs) Handles pnlComputers.Paint
-
     End Sub
 End Class
